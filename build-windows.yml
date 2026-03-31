@@ -1,0 +1,57 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install psd-tools pillow pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller PSD转JPG_Windows.spec --clean --noconfirm
+
+      - name: Create artifact
+        run: Compress-Archive -Path "dist/PSD转JPG" -DestinationPath "PSD转JPG_Windows.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSD转JPG_Windows
+          path: PSD转JPG_Windows.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PSD转JPG_Windows
+          path: .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: PSD转JPG_Windows.zip
+          name: PSD转JPG Windows 便携版
+          body: |
+            PSD转JPG - Windows 便携版
+            解压后双击 PSD转JPG.exe 即可使用，无需安装任何依赖。
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
